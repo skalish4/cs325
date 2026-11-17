@@ -1,0 +1,60 @@
+name: Grades CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "grades-ci/**"
+      - ".github/workflows/grades-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-tests-and-docker:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: grades-ci
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run all five tests
+        run: python -m pytest -v
+
+      - name: Create HTML coverage
+        run: python -m pytest --cov=grades --cov-report=term-missing --cov-report=html:htmlcov
+
+      - name: Upload HTML coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-coverage
+          path: grades-ci/htmlcov/
+
+      - name: Build Docker image
+        run: docker build -t grades-test:v1 .
+
+      - name: Test Docker image
+        run: docker run --rm grades-test:v1
+
+  test-from-dockerhub:
+    if: ${{ vars.DOCKERHUB_USERNAME != '' }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ vars.DOCKERHUB_USERNAME }}/grades-test:v1
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Run tests from published Docker Hub image
+        run: cd grades-ci && pytest -v
