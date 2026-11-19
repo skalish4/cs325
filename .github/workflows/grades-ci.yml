@@ -48,10 +48,9 @@ jobs:
         run: docker run --rm grades-test:v1
 
   test-from-dockerhub:
-    if: ${{ vars.DOCKERHUB_USERNAME != '' }}
     runs-on: ubuntu-latest
     container:
-      image: ${{ vars.DOCKERHUB_USERNAME }}/grades-test:v1
+      image: skalish4/grades-test:v1
     steps:
       - name: Check out code
         uses: actions/checkout@v4
